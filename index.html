@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NYU Athletics Donation Optimization Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.8.0/Recharts.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo } = React;
+        const { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = Recharts;
+
+        // Icons as simple SVGs
+        const TrendingUp = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>;
+        const DollarSign = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>;
+        const Users = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
+        const Target = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>;
+        const Eye = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
+        const Heart = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>;
+        const ArrowRight = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>;
+
+        const NYUDonationDashboard = () => {
+            const [activeTab, setActiveTab] = useState('current');
+            const [selectedSport, setSelectedSport] = useState('basketball');
+            const [donationAmount, setDonationAmount] = useState(500);
+
+            // Mock data for current state
+            const currentMetrics = {
+                monthlyVisitors: 2000,
+                conversionRate: 2.1,
+                avgDonation: 285,
+                monthlyRevenue: 11970
+            };
+
+            // Sports data with fund allocation
+            const sportsData = {
+                basketball: {
+                    name: 'Men\'s Basketball',
+                    allocation: [
+                        { name: 'Coaching & Training', value: 35, color: '#8884d8', amount: 175 },
+                        { name: 'Equipment & Uniforms', value: 25, color: '#82ca9d', amount: 125 },
+                        { name: 'Travel & Competition', value: 20, color: '#ffc658', amount: 100 },
+                        { name: 'Facility Maintenance', value: 15, color: '#ff7300', amount: 75 },
+                        { name: 'Academic Support', value: 5, color: '#0088fe', amount: 25 }
+                    ],
+                    currentDonors: 45,
+                    goalProgress: 68
+                },
+                tennis: {
+                    name: 'Tennis',
+                    allocation: [
+                        { name: 'Court Maintenance', value: 30, color: '#8884d8', amount: 150 },
+                        { name: 'Equipment & Strings', value: 28, color: '#82ca9d', amount: 140 },
+                        { name: 'Travel & Tournaments', value: 25, color: '#ffc658', amount: 125 },
+                        { name: 'Coaching', value: 12, color: '#ff7300', amount: 60 },
+                        { name: 'Academic Support', value: 5, color: '#0088fe', amount: 25 }
+                    ],
+                    currentDonors: 28,
+                    goalProgress: 43
+                },
+                soccer: {
+                    name: 'Soccer',
+                    allocation: [
+                        { name: 'Field & Equipment', value: 32, color: '#8884d8', amount: 160 },
+                        { name: 'Uniforms & Gear', value: 23, color: '#82ca9d', amount: 115 },
+                        { name: 'Travel & Lodging', value: 22, color: '#ffc658', amount: 110 },
+                        { name: 'Coaching Staff', value: 18, color: '#ff7300', amount: 90 },
+                        { name: 'Medical Support', value: 5, color: '#0088fe', amount: 25 }
+                    ],
+                    currentDonors: 32,
+                    goalProgress: 55
+                }
+            };
+
+            // Conversion rate analysis data
+            const conversionData = [
+                { month: 'Jan', current: 1.8, withTransparency: 2.8, industry: 2.1 },
+                { month: 'Feb', current: 2.1, withTransparency: 3.2, industry: 2.1 },
+                { month: 'Mar', current: 1.9, withTransparency: 2.9, industry: 2.1 },
+                { month: 'Apr', current: 2.3, withTransparency: 3.5, industry: 2.1 },
+                { month: 'May', current: 2.0, withTransparency: 3.1, industry: 2.1 },
+                { month: 'Jun', current: 2.2, withTransparency: 3.4, industry: 2.1 }
+            ];
+
+            // Revenue projection data
+            const revenueProjection = [
+                { month: 'Jul', current: 12000, projected: 18000 },
+                { month: 'Aug', current: 11500, projected: 17800 },
+                { month: 'Sep', current: 13200, projected: 19500 },
+                { month: 'Oct', current: 14800, projected: 22200 },
+                { month: 'Nov', current: 16200, projected: 24800 },
+                { month: 'Dec', current: 18500, projected: 28200 }
+            ];
+
+            // Real-world comparison data
+            const comparisonExamples = [
+                {
+                    organization: "charity: water",
+                    type: "With Full Transparency",
+                    conversionRate: 4.2,
+                    avgDonation: 185,
+                    features: ["100% model shown", "GPS tracking of projects", "Photo/video updates", "Exact cost breakdowns"],
+                    result: "Raised $70M+ with industry-leading conversion rates",
+                    color: "green"
+                },
+                {
+                    organization: "Generic University Alumni",
+                    type: "Without Transparency",
+                    conversionRate: 1.8,
+                    avgDonation: 150,
+                    features: ["Basic 'support athletics'", "No allocation details", "Generic thank you", "Annual report only"],
+                    result: "Below-average performance, declining donor retention",
+                    color: "red"
+                },
+                {
